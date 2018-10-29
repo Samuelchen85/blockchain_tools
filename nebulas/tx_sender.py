@@ -24,7 +24,9 @@ class Neb(object):
 
     def __init__(self, vendor):
         self.mainnet = "https://mainnet.nebulas.io"
-        self.testnet = "https://testnet.nebulas.io"
+        #self.testnet = "https://testnet.nebulas.io"
+        self.testnet = "http://52.60.150.236:8685"
+        self.internal = "http://52.47.199.42:8685"
         self.local = "http://localhost:8685"
         self.vendor = vendor
         self.host = self.local
@@ -313,12 +315,16 @@ class Neb(object):
 
     def _load_credential(self):
         fp = open("credential.conf", "r")
-        content = fp.read().strip()
-        data = json.loads(content)
-        self.internal = data.get("internal_host", self.local)
-        self.IR_POSTERS = data.get("IR_POSTERS",{}).get("internal", [])
-        self.SC_DEPLOYER = data.get("SC_DEPLOYER", [])
-        fp.close()
+        try:
+            content = fp.read().strip()
+            data = json.loads(content)
+            self.internal = data.get("internal_host", self.local)
+            self.IR_POSTERS = data.get("IR_POSTERS",{}).get("internal", [])
+            self.SC_DEPLOYER = data.get("SC_DEPLOYER", [])
+        except:
+            print("Credential configuration file is missing or the configuration is incorrect")
+        finally:
+            fp.close()
 
 
     def driver(self, method, paras):
