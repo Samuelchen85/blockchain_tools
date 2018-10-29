@@ -25,10 +25,9 @@ class Neb(object):
     def __init__(self, vendor):
         self.mainnet = "https://mainnet.nebulas.io"
         self.testnet = "https://testnet.nebulas.io"
-        self.internal = "http://x.x.x.:8685"
         self.local = "http://localhost:8685"
         self.vendor = vendor
-        self.host = vendor
+        self.host = self.local
         if vendor == 'mainnet':
             self.host = self.mainnet
         elif vendor == 'testnet':
@@ -36,15 +35,10 @@ class Neb(object):
         elif vendor == 'internal':
             self.host = self.internal
         elif vendor == 'local':
-            self.host == self.local
+            self.host = self.local
         self.ACCT_FILE_NAME = "accounts.txt"
         self.SC_FILE_NAME = "smart_contracts/smart_contracts.txt"
-        self.IR_POSTERS = {
-            "internal":[
-            ]
-        }
-        self.SC_DEPLOYER = [
-        ]
+        self.CMD_RECORD_FILE_NAME = "cmd_history.txt"
 
     def _load_accounts(self):
         # check existing accounts
@@ -100,7 +94,6 @@ class Neb(object):
             response = requests.get(url, headers=get_headers, data=json.dumps(data))
         elif request_mode == 2:
             response = requests.post(url, headers=post_headers, data=json.dumps(data))
-        print(response.text)
         return json.loads(response.text)
 
     def get_register_methods(self):
@@ -229,7 +222,6 @@ class Neb(object):
                     print("\n[SUCCESS] Successfully send transaction!!\n")
                     break
                 elif status == 0:
-                    print(res)
                     print("\n[ERROR] Error in sending the transaction!!\n")
                     break
                 else:
@@ -319,8 +311,19 @@ class Neb(object):
         res = self.request(url, data)
         print(res)
 
+    def _load_credential(self):
+        fp = open("credential.conf", "r")
+        content = fp.read().strip()
+        data = json.loads(content)
+        self.internal = data.get("internal_host", self.local)
+        self.IR_POSTERS = data.get("IR_POSTERS",{}).get("internal", [])
+        self.SC_DEPLOYER = data.get("SC_DEPLOYER", [])
+        fp.close()
+
 
     def driver(self, method, paras):
+        self._load_credential()
+
         if method == 'create':
             if len(paras) < 1:
                 print("Please specify the new account passphrase!")
@@ -371,7 +374,14 @@ class Neb(object):
             print("Invalid method!\nSupported methods are: \n")
             print(Neb.REGISTER_APIS)
             print("\n")
-            
+     
+        # record the successful command
+        fp = open(self.CMD_RECORD_FILE_NAME, 'a')
+        cmd_line = "python3 "
+        for cmd in sys.argv:
+            cmd_line += cmd + " "
+        fp.write(cmd_line + "\n")
+        fp.close()
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
