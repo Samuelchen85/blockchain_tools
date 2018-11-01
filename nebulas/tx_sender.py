@@ -1,9 +1,9 @@
 import sys
-
 import os
 import requests
 import json
 import time
+import traceback
 
 def err(msg):
     print("Error: ", msg)
@@ -20,7 +20,8 @@ class Neb(object):
         "check_accounts",
         "smartcontract",
         "method",
-        "call"
+        "call",
+        "receipt"
     ]
 
     def __init__(self, vendor):
@@ -146,7 +147,12 @@ class Neb(object):
     def _sign_tx(self, data):
         url = '%s/v1/admin/sign'%self.host
         res = self.request(url, data)
-        return res['result']
+        try:
+            return res['result']
+        except:
+            print(res)
+            traceback.print_exc()
+            return None
 
     def _update_sc_addr(self, sc_name, addr):
         fp = open(self.SC_FILE_NAME, "a")
@@ -276,7 +282,7 @@ class Neb(object):
         finally:
             fp.close()
 
-    def call_method(self, contract_name, method_name):
+    def call_method(self, contract_name, method_name, args=[]):
         url = "%s/v1/admin/transactionWithPassphrase"%self.host
         from_addr = self.SC_DEPLOYER[0]['addr']
         passphrase = self.SC_DEPLOYER[0]['passphrase']
@@ -291,10 +297,22 @@ class Neb(object):
             err("failed to check from address nonce")
         nonce = ex_nonce + 1
         transaction_data = {"from":from_addr, "to":to_addr, "value":'{0:.0f}'.format(value*pow(10, 18)), "gasPrice":"1000000", "gasLimit":"2000000", 
-                            "nonce":nonce, "contract":{"function":method_name, "args":""}}
+                            "nonce":nonce, "contract":{"function":method_name, "args":json.dumps(args)}}
         data = {"transaction":transaction_data, "passphrase":passphrase}
+        print(data)
         res = self.request(url, data)
         print(res)
+
+    def get_receipt(self, txhash):
+        try:
+            url = "%s/v1/user/getTransactionReceipt"%self.host
+            data = {'hash':txhash}
+            res = self.request(url, data)
+            print(res)
+            status = res.get('result', {}).get('status', 1)
+            print("\nStatus is: ", status)
+        except:
+            traceback.print_exc()
 
     def pure_call(self, contract_name, method_name):
         url = "%s/v1/user/call"%self.host
@@ -368,7 +386,7 @@ class Neb(object):
             if len(paras) < 2:
                 print("Please specify the smart contract name and the method name")
                 exit(1)
-            self.call_method(paras[0], paras[1])
+            self.call_method(paras[0], paras[1], paras[2:])
         elif method == 'call':
             if len(paras) < 2:
                 print("Please specify the smart contract name and the method name")
@@ -377,6 +395,9 @@ class Neb(object):
         elif method == 'create':
             inst = Neb(host)
             inst.create_account("samuel@nebulas")
+        elif method == 'receipt':
+            inst = Neb(host)
+            inst.get_receipt(paras[0])
         else:
             print("Invalid method!\nSupported methods are: \n")
             print(Neb.REGISTER_APIS)
@@ -402,6 +423,9 @@ if __name__ == "__main__":
 
         inst = Neb(host)
         methods = inst.get_register_methods()
+        if len(sys.argv) < 3:
+            print(Neb.REGISTER_APIS)
+            exit(1)
         method = sys.argv[2]
         
         if method not in methods:
