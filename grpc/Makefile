@@ -5,7 +5,7 @@ LDFLAGS	=-lgrpc -lgrpc++ -lgrpc++_cronet -lgrpc++_error_details -lgrpc++_reflect
 SRC			= listener.cc proto/nvm.pb.cc proto/nvm.grpc.pb.cc
 OBJ			= $(SRC: .cc=.o)
 
-all:engine
+all:listener
 
 listener.o: listener.cc
 	$(CXX) $(CXXFLAGS) -c listener.cc -o listener.o
@@ -14,7 +14,7 @@ proto/nvm.pb.o: proto/nvm.pb.cc
 proto/nvm.grpc.pb.o: proto/nvm.grpc.pb.cc
 	$(CXX) $(CXXFLAGS) -c proto/nvm.grpc.pb.cc -o proto/nvm.grpc.pb.o
 
-engine: listener.o proto/nvm.pb.o proto/nvm.grpc.pb.o 
+listener: listener.o proto/nvm.pb.o proto/nvm.grpc.pb.o 
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 rpc:
@@ -31,4 +31,4 @@ clean:
 	rm -rf *.o proto/*.o
 	rm -rf proto/*.go
 	rm -rf proto/*.cc proto/*.h
-	rm engine
+	rm listener
