@@ -1,188 +1,176 @@
-/*
- *
- * Copyright 2015 gRPC authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- */
-
-#include <algorithm>
+//#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unistd.h>
+#include <thread>
 
 #include <grpc/grpc.h>
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
-#include <grpcpp/security/server_credentials.h>
-#include "helper.h"
-#include "route_guide.grpc.pb.h"
 
-using grpc::Server;
-using grpc::ServerBuilder;
-using grpc::ServerContext;
-using grpc::ServerReader;
-using grpc::ServerReaderWriter;
-using grpc::ServerWriter;
-using grpc::Status;
-using routeguide::Point;
-using routeguide::Feature;
-using routeguide::Rectangle;
-using routeguide::RouteSummary;
-using routeguide::RouteNote;
-using routeguide::RouteGuide;
-using std::chrono::system_clock;
+#include "proto/nvm.pb.h"
+#include "proto/nvm.grpc.pb.h"
 
+class Engine final : public NVM::Service {
 
-float ConvertToRadians(float num) {
-  return num * 3.1415926 /180;
-}
-
-// The formula is based on http://mathforum.org/library/drmath/view/51879.html
-float GetDistance(const Point& start, const Point& end) {
-  const float kCoordFactor = 10000000.0;
-  float lat_1 = start.latitude() / kCoordFactor;
-  float lat_2 = end.latitude() / kCoordFactor;
-  float lon_1 = start.longitude() / kCoordFactor;
-  float lon_2 = end.longitude() / kCoordFactor;
-  float lat_rad_1 = ConvertToRadians(lat_1);
-  float lat_rad_2 = ConvertToRadians(lat_2);
-  float delta_lat_rad = ConvertToRadians(lat_2-lat_1);
-  float delta_lon_rad = ConvertToRadians(lon_2-lon_1);
-
-  float a = pow(sin(delta_lat_rad/2), 2) + cos(lat_rad_1) * cos(lat_rad_2) *
-            pow(sin(delta_lon_rad/2), 2);
-  float c = 2 * atan2(sqrt(a), sqrt(1-a));
-  int R = 6371000; // metres
-
-  return R * c;
-}
-
-std::string GetFeatureName(const Point& point,
-                           const std::vector<Feature>& feature_list) {
-  for (const Feature& f : feature_list) {
-    if (f.location().latitude() == point.latitude() &&
-        f.location().longitude() == point.longitude()) {
-      return f.name();
+  public:
+    explicit Engine(const std::string &msg){
+      this->_msg = msg;
     }
-  }
-  return "";
-}
 
-class RouteGuideImpl final : public RouteGuide::Service {
- public:
-  explicit RouteGuideImpl(const std::string& db) {
-    routeguide::ParseDb(db, &feature_list_);
-  }
+    grpc::Status GetFeature(grpc::ServerContext* ctx, const Point* pt, Feature* ft) override{
+      std::cout<<"Server function call: get feature!"<<std::endl;
 
-  Status GetFeature(ServerContext* context, const Point* point,
-                    Feature* feature) override {
-    feature->set_name(GetFeatureName(*point, feature_list_));
-    feature->mutable_location()->CopyFrom(*point);
-    return Status::OK;
-  }
-
-  Status ListFeatures(ServerContext* context,
-                      const routeguide::Rectangle* rectangle,
-                      ServerWriter<Feature>* writer) override {
-    auto lo = rectangle->lo();
-    auto hi = rectangle->hi();
-    long left = (std::min)(lo.longitude(), hi.longitude());
-    long right = (std::max)(lo.longitude(), hi.longitude());
-    long top = (std::max)(lo.latitude(), hi.latitude());
-    long bottom = (std::min)(lo.latitude(), hi.latitude());
-    for (const Feature& f : feature_list_) {
-      if (f.location().longitude() >= left &&
-          f.location().longitude() <= right &&
-          f.location().latitude() >= bottom &&
-          f.location().latitude() <= top) {
-        writer->Write(f);
-      }
+      std::cout<<std::endl<<"The point latitude is: "<<pt->latitude()<<", longitude is: "<<pt->longitude()<<std::endl;
+      ft->set_name("NVM Feature Name");
+      ft->mutable_location()->CopyFrom(*pt);
+      return grpc::Status::OK;
     }
-    return Status::OK;
-  }
 
-  Status RecordRoute(ServerContext* context, ServerReader<Point>* reader,
-                     RouteSummary* summary) override {
-    Point point;
-    int point_count = 0;
-    int feature_count = 0;
-    float distance = 0.0;
-    Point previous;
-
-    system_clock::time_point start_time = system_clock::now();
-    while (reader->Read(&point)) {
-      point_count++;
-      if (!GetFeatureName(point, feature_list_).empty()) {
-        feature_count++;
-      }
-      if (point_count != 1) {
-        distance += GetDistance(previous, point);
-      }
-      previous = point;
+    grpc::Status GetDeploySrc(grpc::ServerContext* ctx, const DeployRequest* dr, DeployResponse* drs) override{
+      std::cout<<"Server function call: get deploy source!"<<std::endl;
+      
+      std::cout<<"The deploy request is: "<<dr->script()<<", function is: "<<dr->function()<<std::endl;
+      drs->set_result("The result is successful!");
+      drs->set_err_msg("The deploy msg is: " + this->_msg);
+      return grpc::Status::OK;
     }
-    system_clock::time_point end_time = system_clock::now();
-    summary->set_point_count(point_count);
-    summary->set_feature_count(feature_count);
-    summary->set_distance(static_cast<long>(distance));
-    auto secs = std::chrono::duration_cast<std::chrono::seconds>(
-        end_time - start_time);
-    summary->set_elapsed_time(secs.count());
 
-    return Status::OK;
-  }
+    grpc::Status ExchangeData(grpc::ServerContext* ctx, grpc::ServerReaderWriter<DataPackageResponse, DataPackage>* stm) override {
 
-  Status RouteChat(ServerContext* context,
-                   ServerReaderWriter<RouteNote, RouteNote>* stream) override {
-    std::vector<RouteNote> received_notes;
-    RouteNote note;
-    while (stream->Read(&note)) {
-      for (const RouteNote& n : received_notes) {
-        if (n.location().latitude() == note.location().latitude() &&
-            n.location().longitude() == note.location().longitude()) {
-          stream->Write(n);
+      this->_stm = stm;
+
+      std::vector<DataPackage> package_vec;
+
+      //DataPackageResponse *resdp = new DataPackageResponse();
+      //resdp->set_res(10001000);
+      /*
+      rdp.set_service_type("deploy_success");
+      rdp.set_dpid(107);
+      rdp.set_source("no source provided");
+      */
+      //stm->Write(*resdp);
+      //std::cout<<std::endl<<"server sent an object to client"<<std::endl;
+
+
+      DataPackage *rdp = new DataPackage();
+      //bool res = stm->Read(rdp);
+
+      int counter = 100;
+      while(stm->Read(rdp)){
+        std::cout<<"Hey"<<std::endl;
+
+        std::cout<<"Server received an object: "<<rdp->service_type()<<", result is: "<<rdp->dpid()<<std::endl;
+        
+        usleep(2000000);
+        
+        std::cout<<"ha"<<std::endl;
+
+        DataPackageResponse *resdp = new DataPackageResponse();
+        resdp->set_res(counter);
+        counter+=1;
+
+        stm->Write(*resdp);
+      }
+
+      /*
+      while(stm->Read(&dp)){
+        if(dp.dpid() == 1 || dp.GetTypeName().compare("deploy") == 0){
+          DataPackage rdp;
+          rdp.set_service_type("deploy_success");
+          rdp.set_dpid(3);
+          rdp.set_source("no source provided");
+          stm->Write(rdp);
+
+          std::cout<<"Received deploy request"<<std::endl;
+
+        }else if(dp.dpid() == 2 || dp.GetTypeName().compare("call") == 0){
+          DataPackage rdp;
+          rdp.set_service_type("call_success");
+          rdp.set_dpid(3);
+          rdp.set_source("no function provided");
+          stm->Write(rdp);
+
+          std::cout<<"Received call request"<<std::endl;
+
         }
+        package_vec.push_back(dp);
       }
-      received_notes.push_back(note);
+      */
+
+      return grpc::Status::OK;
     }
 
-    return Status::OK;
-  }
+    grpc::Status ServerSendInfo(grpc::ServerContext* ctx, DataPackage* dp, grpc::ServerWriter<DataPackage>* stm){
+      
+      std::cout<<"In function ServerSendINfo"<<std::endl;
 
- private:
+      for(int i=0; i<3; i++){
+        DataPackage dp;
+        dp.set_dpid(i+1);
+        dp.set_service_type("Deploy");
+        dp.set_source("Server has no source yet");
+        stm->Write(dp);
+      }
 
-  std::vector<Feature> feature_list_;
+      return grpc::Status::OK;
+    }
+
+    void SendRequest(){
+      if(this->_stm != NULL){
+        std::cout<<"HouHouHou"<<std::endl;
+
+        DataPackageResponse *resdp = new DataPackageResponse();
+        resdp->set_res(506070);
+        this->_stm->Write(*resdp);
+      }else{
+        std::cout<<"Stream is not ready yet!!"<<std::endl;
+      }
+    }
+
+  private:
+    std::string _msg;
+
+    grpc::ServerReaderWriter<DataPackageResponse, DataPackage>* _stm = NULL;
 };
 
-void RunServer(const std::string& db_path) {
-  std::string server_address("0.0.0.0:50051");
-  RouteGuideImpl service(db_path);
+Engine* engine_instance;
 
-  ServerBuilder builder;
+void Callback(){
+  unsigned int microseconds = 6000000;
+  
+  usleep(microseconds); 
+
+  std::cout<<">>>Now is in callback"<<std::endl;
+
+  engine_instance->SendRequest();
+}
+
+void RunServer() {
+
+  std::string server_address("127.0.0.1:11199");
+  Engine service("Now start a new engine");
+
+  engine_instance = &service;
+
+  grpc::ServerBuilder builder;
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
   builder.RegisterService(&service);
-  std::unique_ptr<Server> server(builder.BuildAndStart());
+  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
   std::cout << "Server listening on " << server_address << std::endl;
+
   server->Wait();
 }
 
 int main(int argc, char** argv) {
-  // Expect only arg: --db_path=path/to/route_guide_db.json.
-  std::string db = routeguide::GetDbFileContent(argc, argv);
-  RunServer(db);
+
+  std::thread callback(Callback);
+
+  RunServer();
 
   return 0;
 }

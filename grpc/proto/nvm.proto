@@ -1,9 +1,12 @@
 syntax="proto3";
 
-
 service NVM{
   rpc GetFeature(Point) returns (Feature) {}
   rpc GetDeploySrc(DeployRequest) returns (DeployResponse){}
+
+  rpc ExchangeData(stream DataPackage) returns (stream DataPackageResponse) {}
+
+  rpc ServerSendInfo(DataPackage) returns (stream DataPackage) {}
 }
 
 message Feature{
@@ -24,4 +27,15 @@ message DeployRequest{
 message DeployResponse{
   string result=1;
   string err_msg=2;
+}
+
+message DataPackage{
+  int64 dpid = 1;
+  string service_type = 2;
+  string source = 3;
+  repeated string paras = 4;
+}
+
+message DataPackageResponse{
+  int64 res = 1;
 }

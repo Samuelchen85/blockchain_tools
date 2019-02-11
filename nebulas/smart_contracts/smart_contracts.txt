@@ -1,99 +1,121 @@
-'use strict';
-
-var DepositeContent = function (text) {
-  if (text) {
-    var o = JSON.parse(text);
-    this.balance = new BigNumber(o.balance);
-    this.expiryHeight = new BigNumber(o.expiryHeight);
-  } else {
-    this.balance = new BigNumber(0);
-    this.expiryHeight = new BigNumber(0);
-  }
-};
-
-DepositeContent.prototype = {
-  toString: function () {
-    return JSON.stringify(this);
-  }
-};
-
-var BankVaultContract = function () {
-  LocalContractStorage.defineMapProperty(this, "bankVault", {
-    parse: function (text) {
-      return new DepositeContent(text);
-    },
-    stringify: function (o) {
-      return o.toString();
-    }
-  });
-};
-
-// save value to contract, only after height of block, users can takeout
-BankVaultContract.prototype = {
-  init: function () {
-    //TODO:
-  },
-
-  save: function (height) {
-    var from = Blockchain.transaction.from;
-    var value = Blockchain.transaction.value;
-    var bk_height = new BigNumber(Blockchain.block.height);
-
-    var orig_deposit = this.bankVault.get(from);
-    if (orig_deposit) {
-      value = value.plus(orig_deposit.balance);
-    }
-
-    var deposit = new DepositeContent();
-    deposit.balance = value;
-    deposit.expiryHeight = bk_height.plus(height);
-
-    this.bankVault.put(from, deposit);
-  },
-
-  takeout: function (value) {
-    var from = Blockchain.transaction.from;
-    var bk_height = new BigNumber(Blockchain.block.height);
-    var amount = new BigNumber(value);
-
-    var deposit = this.bankVault.get(from);
-    if (!deposit) {
-      throw new Error("No deposit before.");
-    }
-
-    if (bk_height.lt(deposit.expiryHeight)) {
-      throw new Error("Can not takeout before expiryHeight.");
-    }
-
-    if (amount.gt(deposit.balance)) {
-      throw new Error("Insufficient balance.");
-    }
-
-    var result = Blockchain.transfer(from, amount);
-    if (!result) {
-      throw new Error("transfer failed.");
-    }
-    Event.Trigger("BankVault", {
-      Transfer: {
-        from: Blockchain.transaction.to,
-        to: from,
-        value: amount.toString()
-      }
-    });
-
-    deposit.balance = deposit.balance.sub(amount);
-    this.bankVault.put(from, deposit);
-  },
-  balanceOf: function () {
-    var from = Blockchain.transaction.from;
-    return this.bankVault.get(from);
-  },
-  verifyAddress: function (address) {
-    // 1-valid, 0-invalid
-    var result = Blockchain.verifyAddress(address);
-    return {
-      valid: result == 0 ? false : true
-    };
-  }
-};
-module.exports = BankVaultContract;
+{"name": "vault", "addr": "n1zfmBKsxYNp7z7snepRQg29VF67YCKGJmU"}
+{"name": "vault", "addr": "n1rNSXPRL8xs7hGzsvz59cTvChJVsApD7au"}
+{"name": "vault", "addr": "n1tdQUiGQkgW5qrtgRAcufsxfhcAdrvufTs"}
+{"name": "vault", "addr": "n216DvFK4EhoabY6HdW7ZNqEKr3ypCqAuwz"}
+{"name": "vault", "addr": "n1zfmBKsxYNp7z7snepRQg29VF67YCKGJmU"}
+{"name": "vault", "addr": "n1zfmBKsxYNp7z7snepRQg29VF67YCKGJmU"}
+{"name": "vault", "addr": "n1zfmBKsxYNp7z7snepRQg29VF67YCKGJmU"}
+{"name": "vault", "addr": "n1zfmBKsxYNp7z7snepRQg29VF67YCKGJmU"}
+{"name": "vault", "addr": "n1zfmBKsxYNp7z7snepRQg29VF67YCKGJmU"}
+{"name": "vault", "addr": "n1zfmBKsxYNp7z7snepRQg29VF67YCKGJmU"}
+{"name": "vault", "addr": "n1zfmBKsxYNp7z7snepRQg29VF67YCKGJmU"}
+{"name": "vault", "addr": "n1twFB4zmhuU1ujiFF4oQcpNWJKiJcZda29"}
+{"name": "vault", "addr": "n1xWG3QAXq6y1u7VCfyrs15D4HqkkuPYWna"}
+{"name": "vault", "addr": "n22VEUMxehiQwCf2Lht5KTbP1thLfceuxr6"}
+{"name": "vault", "addr": "n1sbEHnNHVv1vgZaYBuywZZVfmjqtDiGH3Z"}
+{"name": "vault", "addr": "n1gJguRcKL23XRgwkSMK4YwmC4sefXW7vEj"}
+{"name": "vault", "addr": "n1i5KDRCQWhiyWTHAvr4gbgmoxVui3tFVoZ"}
+{"name": "vault", "addr": "n1kXg5qTeeYNYTsyouR1y92eBT2uXmpFdbT"}
+{"name": "vault", "addr": "n1kXg5qTeeYNYTsyouR1y92eBT2uXmpFdbT"}
+{"name": "vault", "addr": "n1kXg5qTeeYNYTsyouR1y92eBT2uXmpFdbT"}
+{"name": "vault", "addr": "n212pBWvAdVFMX8jH99YVbSEM6fEoRFPu4K"}
+{"name": "vault", "addr": "n1pveoJpcDyNR7FUv864a6Vqtkg2u1TzYy4"}
+{"name": "vault", "addr": "n21BPY8c1isUH24Zgsux7U7zGNA6SLJM2HT"}
+{"name": "vault", "addr": "n2116qng6pvjGz8QA5uPkmbXSYEKtFZ8gpG"}
+{"name": "vault", "addr": "n21gMZqAQv3bSedm2Yx6SUnQnGyVRsKisEM"}
+{"name": "vault", "addr": "n21gMZqAQv3bSedm2Yx6SUnQnGyVRsKisEM"}
+{"name": "atp", "addr": "n1gNr3ZdVggkAqwbkPiKZpEG2drmw4NNr4B"}
+{"name": "vault", "addr": "n1eCBVFW6pmd6KNP73FBDPEwGWGqPFKX2Ue"}
+{"name": "vault", "addr": "n1tPrnxvpgArGboChMdPm8vuf5FzPtechNo"}
+{"name": "vault", "addr": "n1s26F2HkKHgD1Aop9AdfjzDzqFfKp9LESA"}
+{"name": "vault", "addr": "n1eLYvBX3urSEkQdVKMujD8FA6gQyamEZbx"}
+{"name": "atp", "addr": "n1rfuKnDanFw2XwEMZ96QQv3cK4i6uttCkV"}
+{"name": "atp", "addr": "n1gnhGU7Pj6gc5JWHEP5d4DstMxf5GUNb9T"}
+{"name": "atp", "addr": "n1epafWLM2GqUD6FqFjn1AYEQHw2hNMDasD"}
+{"name": "vault", "addr": "n1xtVkHhJwFb1H3AVbeFpv2g5Pi2YYPHdgU"}
+{"name": "atp", "addr": "n1hznys25A9YjYWQhVTPRociyRY2Rs7KKdm"}
+{"name": "atp", "addr": "n1h7V1itsTVXu5HQtpdQJM1HsRdkU5gLedi"}
+{"name": "atp", "addr": "n1m1B2pRY2c9fU8vBeSAWBiLYUM2CAP5Ntx"}
+{"name": "vault", "addr": "n1m1B2pRY2c9fU8vBeSAWBiLYUM2CAP5Ntx"}
+{"name": "vault", "addr": "n1m1B2pRY2c9fU8vBeSAWBiLYUM2CAP5Ntx"}
+{"name": "atp", "addr": "n1x6Drx8zt4TmkoKtwQHExQq1BAQApS3Xga"}
+{"name": "vault", "addr": "n1kWQGWTSqWT2sccXUXYeyeFaScbVKbsUiU"}
+{"name": "vault", "addr": "n1iAvrWvyScZZvPLYUZzRH8ekxLyWRWZXDk"}
+{"name": "vault", "addr": "n1fVVW27nerhqqeuDwY4P5KzsPwxQijWZ5m"}
+{"name": "vault", "addr": "n21UzriEysGojVprUHB9QaDK8JHJt5LRJLc"}
+{"name": "vault", "addr": "n1szPB2hVmb5oh6ew7xn8Q89b2XfF7a6SqJ"}
+{"name": "vault", "addr": "n1qCSPAane3wpStr8vgoi3m3jq8pTgRmfMR"}
+{"name": "vault", "addr": "n1r4E5nz9Jue76LDi7Fb8wCvrBQ4y4C1dVY"}
+{"name": "vault", "addr": "n1w4UbykeVvXWMUimBd3ccD47NewqUhaGBP"}
+{"name": "vault", "addr": "n1zK15FL43YWzUiy8EXEEXw5yoQUcfcPywA"}
+{"name": "vault", "addr": "n1muFkhs9RWmynWsDQBp5KGYmUUd2V9hnSa"}
+{"name": "vault", "addr": "n1zbJMnwR97mdnd9Es6SFsMbvTsaoCNsTrg"}
+{"name": "atp", "addr": "n1wpeP8vVxrFwsVJf8z85rGc821gSYKVUv2"}
+{"name": "atp", "addr": "n1yiRvJJpzm9k9Ei6n1NocPjAu2JGSxqGwi"}
+{"name": "vault", "addr": "n1iAvrWvyScZZvPLYUZzRH8ekxLyWRWZXDk"}
+{"name": "vault", "addr": "n21UzriEysGojVprUHB9QaDK8JHJt5LRJLc"}
+{"name": "vault", "addr": "n1szPB2hVmb5oh6ew7xn8Q89b2XfF7a6SqJ"}
+{"name": "vault", "addr": "n1qCSPAane3wpStr8vgoi3m3jq8pTgRmfMR"}
+{"name": "vault", "addr": "n1r4E5nz9Jue76LDi7Fb8wCvrBQ4y4C1dVY"}
+{"name": "vault", "addr": "n1w4UbykeVvXWMUimBd3ccD47NewqUhaGBP"}
+{"name": "vault", "addr": "n1zK15FL43YWzUiy8EXEEXw5yoQUcfcPywA"}
+{"name": "atp", "addr": "n1muFkhs9RWmynWsDQBp5KGYmUUd2V9hnSa"}
+{"name": "atp", "addr": "n1zbJMnwR97mdnd9Es6SFsMbvTsaoCNsTrg"}
+{"name": "atp", "addr": "n1wpeP8vVxrFwsVJf8z85rGc821gSYKVUv2"}
+{"name": "atp", "addr": "n1fyvsQF7P7Ak92PWyE8iJiNgLrTXrG7PEm"}
+{"name": "vault", "addr": "n1fyvsQF7P7Ak92PWyE8iJiNgLrTXrG7PEm"}
+{"name": "vault", "addr": "n1fUYexrk9EHXBe5pEFs4VwJCLa2F8J3rhT"}
+{"name": "atp", "addr": "n1u1nYcyRx5HVotbF2ouGPMCRXuppkj2Y8P"}
+{"name": "atp", "addr": "n1jDm8uAGHn8kCQTd5jTHaptv3gcwPZEUa9"}
+{"name": "atp", "addr": "n1hefghgAM3wGyvmYFW7jNjWhn3qwQYgpgF"}
+{"name": "atp", "addr": "n1duCufsvfPj4qEpHv6GRyzUeXNDa5NkGjf"}
+{"name": "atp", "addr": "n1ncvD9bzZVgE1fUTLLUdCURptgrYhHq1sL"}
+{"name": "vault", "addr": "n1ncvD9bzZVgE1fUTLLUdCURptgrYhHq1sL"}
+{"name": "vault", "addr": "n1ncvD9bzZVgE1fUTLLUdCURptgrYhHq1sL"}
+{"name": "vault", "addr": "n1mFhPBhSxrqwaERq89yrRJBB6JtpBTeoQ2"}
+{"name": "vault", "addr": "n1muZex449feqegSPwW3xAmqmCDTSaTp1kf"}
+{"name": "vault", "addr": "n1muZex449feqegSPwW3xAmqmCDTSaTp1kf"}
+{"name": "vault", "addr": "n1n2xSoxv6kxXzX4rFzim9wATEqnG6d6W2F"}
+{"name": "vault", "addr": "n1srSdvAQQRX3hJurBabugT65rtT8RQccsi"}
+{"name": "vault", "addr": "n1t92ZkkTn4wvqK2DS82CWDsgxSqZkJNt4h"}
+{"name": "vault", "addr": "n1yWFJvBCWCpgpB4vf2uDUWgAQTcFnYV4cb"}
+{"name": "vault", "addr": "n22qdcpJvAWpmwdRm9Fx7wmv2sDadD58MWq"}
+{"name": "vault", "addr": "n1tMsA3Erh1xrgGnfmrMwMN9bfCfAGyjMsX"}
+{"name": "vault", "addr": "n1jg93MX8k5cSc8wx63khbJbaGP17b9BLNA"}
+{"name": "vault", "addr": "n1mPaUcjJPmNMSFcav2kzj95dUuPjUcpEg7"}
+{"name": "vault", "addr": "n1g5FEWmJ2Ch9KpwTtFUr3GgRPe6kjswaeq"}
+{"name": "vault", "addr": "n1gvc3MHUrZyFjJQaazccYdaYqaJy35xs3K"}
+{"name": "vault", "addr": "n1j9Zeww1Qdw5YQp3U9FQ22dCbJwgjK9py1"}
+{"name": "vault", "addr": "n1qMAxtChW2gH2hhDiFg13V4G6GfnAoUTN1"}
+{"name": "vault", "addr": "n1xR7PczzzvmQ42kz3BcDQvGoVR31LdR5GN"}
+{"name": "vault", "addr": "n1iPjt2iMqZsBZFQf6KTrH1z8u8gGQRZsjz"}
+{"name": "vault", "addr": "n1rNSXPRL8xs7hGzsvz59cTvChJVsApD7au"}
+{"name": "vault", "addr": "n1f63Fs4zoSfz3mpzEbuo2dtXnMRP6RVg6i"}
+{"name": "vault", "addr": "n1tELN7wy2eBkESfM417ah9qc5rWipELrbK"}
+{"name": "vault", "addr": "n1uCBSYtU5jw2JPQN55uPr5jc5JMpUozT2p"}
+{"name": "atp", "addr": "n1rstTpfwRptRNbFKLqj4Y676NpzJYCMrPK"}
+{"name": "atp", "addr": "n1uV2Kpbv4oYHTMStwo14JZ5N5p5ffRGPsa"}
+{"name": "atp", "addr": "n1e2no7dzP6AvaWpZShsvkkrTmGeSUCEgL1"}
+{"name": "atp", "addr": "n1tdQUiGQkgW5qrtgRAcufsxfhcAdrvufTs"}
+{"name": "vault", "addr": "n1xE1wTes4u3NvADyvEfzFomjCAPqPjVSLb"}
+{"name": "vault", "addr": "n216DvFK4EhoabY6HdW7ZNqEKr3ypCqAuwz"}
+{"name": "sample", "addr": "n1rNSXPRL8xs7hGzsvz59cTvChJVsApD7au"}
+{"name": "sample", "addr": "n1yiRvJJpzm9k9Ei6n1NocPjAu2JGSxqGwi"}
+{"name": "sample", "addr": "n1iAvrWvyScZZvPLYUZzRH8ekxLyWRWZXDk"}
+{"name": "sample", "addr": "n1fVVW27nerhqqeuDwY4P5KzsPwxQijWZ5m"}
+{"name": "storage", "addr": "n21UzriEysGojVprUHB9QaDK8JHJt5LRJLc"}
+{"name": "vault", "addr": "n1muFkhs9RWmynWsDQBp5KGYmUUd2V9hnSa"}
+{"name": "vault", "addr": "n1zbJMnwR97mdnd9Es6SFsMbvTsaoCNsTrg"}
+{"name": "vault", "addr": "n1wpeP8vVxrFwsVJf8z85rGc821gSYKVUv2"}
+{"name": "vault", "addr": "n1fyvsQF7P7Ak92PWyE8iJiNgLrTXrG7PEm"}
+{"name": "vault", "addr": "n23BRwJa13Q9vZFeh1z2nhbDVfunoh3HTp7"}
+{"name": "vault", "addr": "n1kSUuSRdnBg1zayxfH3aGz6piWrtMf6tv4"}
+{"name": "vault", "addr": "n1oVZ8zrTiz9cAACXpbjjMS6LZG4Uncvbvu"}
+{"name": "vault", "addr": "n1z68dnrcL313B1cntp1GNwRDALj1Unz9eX"}
+{"name": "vault", "addr": "n1s6jd6m8AKW7U5Xf1Z9xtMzoVWJaCxzYWS"}
+{"name": "vault", "addr": "n1hoXAJJKjeLGHQaF7rK5qcyPtmYvK4vWbq"}
+{"name": "vault", "addr": "n227yDt5sPZS5xGUHRWf2S1WHWk66fEMwRj"}
+{"name": "storage", "addr": "n1kjqaS1Xd4HCcSYCq93eiBAXgWRqEoeCCA"}
+{"name": "storage", "addr": "n1yLkvQSBtcuYo1uXuWAfF65mTwhzgskzvG"}
+{"name": "storage", "addr": "n23BRwJa13Q9vZFeh1z2nhbDVfunoh3HTp7"}
+{"name": "storage", "addr": "n1f9Gydo7NBHAETsfYShdK1BWW1zmEUgV28"}

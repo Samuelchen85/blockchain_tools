@@ -21,15 +21,19 @@ class Neb(object):
         "smartcontract",
         "method",
         "call",
-        "receipt"
+        "receipt",
+        "stress"
     ]
 
     def __init__(self, vendor):
         self.mainnet = "https://mainnet.nebulas.io"
         #self.testnet = "https://testnet.nebulas.io"
-        self.testnet = "http://52.60.150.236:8685"
-        self.internal = "http://52.47.199.42:8685"
-        self.local = "http://localhost:8685"
+        self.testnet = "http://39.98.71.80:8685"
+        #self.internal = "http://52.47.199.42:8685"
+        #self.internal = "http://107.155.52.114:8685"
+        self.internal = "http://47.92.203.173:9685"
+        self.local = "http://localhost:1785"
+        self.test = "http://localhost:2785"
         self.vendor = vendor
         self.host = self.local
         if vendor == 'mainnet':
@@ -40,6 +44,8 @@ class Neb(object):
             self.host = self.internal
         elif vendor == 'local':
             self.host = self.local
+        elif vendor == 'test':
+            self.host = self.test
         self.ACCT_FILE_NAME = "accounts.txt"
         self.SC_FILE_NAME = "smart_contracts/smart_contracts.txt"
         self.CMD_RECORD_FILE_NAME = "cmd_history.txt"
@@ -247,7 +253,7 @@ class Neb(object):
         self._base_transaction(from_addr, to_addr, value, data)
 
     def sendIR(self, ir_file_path):
-        addr_info = self.IR_POSTERS[self.vendor][0]
+        addr_info = self.IR_POSTERS[0]
         from_addr = addr_info['addr']
         to_addr = from_addr
         value="0.0"
@@ -258,7 +264,7 @@ class Neb(object):
             data = {"passphrase":passphrase, "transaction":{"protocol":ir.strip()}}
             self._base_transaction(from_addr, to_addr, value, data)
         except:
-            pass
+            traceback.print_exc()
         finally:
             fp.close()
 
@@ -268,12 +274,14 @@ class Neb(object):
             passphrase = self.SC_DEPLOYER[0]["passphrase"]
         from_addr = deployer
         to_addr = deployer
-        value = "0.0"
+        value = "1.2345"
 
         fp = open(sc_fp, "r")
         try:
             contract_content = fp.read().strip()
-            data = {"passphrase":passphrase, "transaction":{"contract":{"source":contract_content, "sourceType":"js", "args":""}}}
+            data = {"passphrase":passphrase,
+                    "transaction":{"contract":{"source":contract_content,
+                        "sourceType":"js", "args":"[\"samuel\", 1010]"}}}
             data["sc_name"] = os.path.basename(sc_fp).split(".")[0]
             print(data)
             self._base_transaction(from_addr, to_addr, value, data, "sc")
@@ -288,14 +296,15 @@ class Neb(object):
         passphrase = self.SC_DEPLOYER[0]['passphrase']
         to_addr = self._get_contract_address(contract_name)
 
-        print("The contract address is: ", to_addr)
-        
-        value = 0.0
+        value = 1.432
         # check nonce
         ex_nonce = self._check_nonce(from_addr)
         if ex_nonce < 0:
             err("failed to check from address nonce")
         nonce = ex_nonce + 1
+
+        print("The contract address is: ", to_addr, ", and the args are: ", json.dumps(args), ", the nonce is: ", nonce)
+
         transaction_data = {"from":from_addr, "to":to_addr, "value":'{0:.0f}'.format(value*pow(10, 18)), "gasPrice":"1000000", "gasLimit":"2000000", 
                             "nonce":nonce, "contract":{"function":method_name, "args":json.dumps(args)}}
         data = {"transaction":transaction_data, "passphrase":passphrase}
@@ -314,21 +323,23 @@ class Neb(object):
         except:
             traceback.print_exc()
 
-    def pure_call(self, contract_name, method_name):
+    def pure_call(self, contract_name, method_name, args):
         url = "%s/v1/user/call"%self.host
         from_addr = self.SC_DEPLOYER[0]['addr']
         to_addr = self._get_contract_address(contract_name)
         
-        print("The called contract address is: ", to_addr, ", from addr is: ", from_addr)
+        print("The called contract address is: ", to_addr, ", from addr is: ",
+                from_addr, ", and the args are: ", args)
 
-        value = 0.0
+        value = 0.001
         # check nonce
         ex_nonce = self._check_nonce(from_addr)
         if ex_nonce < 0:
             err("failed to check from address nonce")
         nonce = ex_nonce + 1
         data = {"from":from_addr, "to":to_addr, "value":'{0:.0f}'.format(value*pow(10, 18)), "gasPrice":"1000000", "gasLimit":"2000000", 
-                            "nonce":nonce, "contract":{"function":method_name, "args":""}}
+                            "nonce":nonce, "contract":{"function":method_name, "args":json.dumps(args)} }
+        print(data)
         res = self.request(url, data)
         print(res)
 
@@ -391,7 +402,7 @@ class Neb(object):
             if len(paras) < 2:
                 print("Please specify the smart contract name and the method name")
                 exit(1)
-            self.pure_call(paras[0], paras[1])
+            self.pure_call(paras[0], paras[1], paras[2:])
         elif method == 'create':
             inst = Neb(host)
             inst.create_account("samuel@nebulas")
@@ -411,13 +422,74 @@ class Neb(object):
         fp.write(cmd_line + "\n")
         fp.close()
 
+    def stress_testing(self, paras):
+        try:
+            filename = paras[0]
+            fp = open(filename, "r")
+            addrs = fp.readlines()
+            fp.close()
+            contract_name = None
+            if len(paras)>1:
+                contract_name = paras[1]
+
+            # directly send out tx
+            url = '%s/v1/admin/transactionWithPassphrase'%self.host
+            nonce = 2  # by default to be 1
+
+            gas_price = '1000000'
+            gas_limit = '2000000'
+
+            value = 0.0001
+
+            if contract_name == None:
+                counter = 1
+                for addr in addrs:
+                    addr = addr.strip()
+                    print("[%d] from address is: %s"%(counter, addr))
+                    counter += 1
+                    data = {"transaction":{}, "passphrase":"samuel@nebulas"}
+                    data["transaction"]["nonce"] = nonce
+                    data["transaction"]["gasPrice"] = gas_price
+                    data["transaction"]["gasLimit"] = gas_limit
+                    data["transaction"]["from"] = addr
+                    data["transaction"]["to"] = to_addr
+                    data["transaction"]["value"] = '{0:.0f}'.format(float(value)*pow(10, 18))
+                    print("Data is: ", data)
+                    res = self.request(url, data)
+                    print(res)
+            else:
+                # assume the contract name is vault
+                to_addr = self._get_contract_address(contract_name)
+                func_name = "save"
+                args = [2]
+                contract_json ={"function":func_name, "args":json.dumps(args)}
+                counter = 1
+                for addr in addrs:
+                    addr = addr.strip()
+                    print("[%d] contract from address is: %s"%(counter, addr))
+                    counter += 1
+                    data = {"transaction":{"contract":contract_json}, "passphrase":"samuel@nebulas"}
+                    data["transaction"]["nonce"] = nonce
+                    data["transaction"]["gasPrice"] = gas_price
+                    data["transaction"]["gasLimit"] = gas_limit
+                    data["transaction"]["from"] = addr
+                    data["transaction"]["to"] = to_addr
+                    data["transaction"]["value"] = '{0:.0f}'.format(float(value)*pow(10, 18))
+                    print("Data is: ", data)
+                    res = self.request(url, data)
+                    print(res)
+
+        except:
+            traceback.print_exc()
+        
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python %s [mainnet | testnet | internal | ...] method([balance | tx | ...]) address ..."%__file__)
         exit(1)
     else:
         host = sys.argv[1]
-        if host != 'mainnet' and host != 'testnet' and host != "local" and host != "internal":
+        if host != 'mainnet' and host != 'testnet' and host != "local" and host != "internal" and host != "test":
             print("specify which net you wanna connect to, the value can be mainnet, testnet or local")
             exit(1)
 
@@ -433,5 +505,8 @@ if __name__ == "__main__":
             print(Neb.REGISTER_APIS)
             print("\n")
             exit(1)
-
-        inst.driver(method, sys.argv[3:])
+        
+        if method != "stress":
+            inst.driver(method, sys.argv[3:])
+        else:
+            inst.stress_testing(sys.argv[3:])
