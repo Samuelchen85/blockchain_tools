@@ -1,7 +1,7 @@
 
 CXX			= clang++
 CXXFLAGS=-I. -O3 -std=c++14
-LDFLAGS	=-lgrpc -lgrpc++ -lgrpc++_cronet -lgrpc++_error_details -lgrpc++_reflection -lgrpc++_unsecure -lgrpc_cronet -lgrpc_unsecure
+LDFLAGS	=-lgrpc -lgrpc++ -lgrpc++_cronet -lgrpc++_error_details -lgrpc++_reflection -lgrpc++_unsecure -lgrpc_cronet -lgrpc_unsecure -lprotobuf
 SRC			= server.cc proto/nvm.pb.cc proto/nvm.grpc.pb.cc
 OBJ			= $(SRC: .cc=.o)
 
