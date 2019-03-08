@@ -21,7 +21,7 @@ var OptionItem = function(name){
 OptionItem.prototype = {
   toString: function(){
     return JSON.stringify(this);
-  }
+  },
 };
 
 var Scene = function(name, admin, owner) {
@@ -36,51 +36,80 @@ var Scene = function(name, admin, owner) {
 };
 
 Scene.prototype = {
+
   _authorityCheck: function(){
     if(Blockchain.transaction.from != this._owner || Blockchain.transaction.from != this._admin)
       throw new Error("This operation can only be done by owner or admin");
-  }
-
+  },
 
   // public methods
   getOwner: function(){
     return this._owner;
   },
 
-  addOption: function(option_name){
+  setOwner: function(owner){
     this._authorityCheck();
-
-    this._options.set(this._options.size+1, new OptionItem(option_name));
+    this._owner = owner;
   },
 
-  deleteOption: function(option_index){
+  // add an option into current scene
+  addOption: function(optionName){
+    this._authorityCheck();
+
+    this._options.set(this._options.size+1, new OptionItem(optionName));
+  },
+
+  // authority required: delete option according to the "optionIndex"
+  deleteOption: function(optionIndex){
     this._authorityCheck();
 
     // convert index to integer
-    var indx = parseInt(option_index);
+    var indx = parseInt(optionIndex, 10);
     if(indx<=0 || indx>this._options.size)
       throw new Error("Invalid option index");
 
     var optionItem = this._options.get(indx);
-    for(var i=0; i<optionItem.voters.size; i++){
-      this._users.delete(optionItem.voters[i]);
+    for(let voter of optionItem.voters){
+      this._users.delete(voter.user);
+      optionItem.voters.delete(voter);
     }
-    this._options.delete(parseInt(option_index, 10));
+    this._options.delete(indx);
   },
 
+  // vote one option
   voteOption: function(option_index, user){
     var indx = parseInt(option_index, 10);
     if(indx < 1 || indx > this._options.size)
       throw new Error("Invalid option choice");
-    if(user == undefined || user.length() == 0)
+    if(user == undefined || user.length == 0)
       throw new Error("Invalid user address");
     var optionItem = this._options.get(indx);
     optionItem.voters.add(new VoterItem(user));
     this._users.add(user);
   },
 
+  // did given "user" vote?
   hasVote: function(){
     return this._users.has(Blockchain.transaction.from); 
+  },
+
+  // authority required: remove one user's vote
+  deleteVote: function(user){
+    this._authorityCheck();
+
+    if(!this._users.has(user))
+      throw new Error("The user did not even voted");
+
+    for(var i=1; i<=this._options.size; i++){
+      var voters = this._options.get(i).voters;
+      for(let voter of voters){
+        if(voter.user == user){
+          voters.delete(voter);
+          break;
+        }
+      }
+    }
+    this._users.delete(user);
   },
 
   toString: function(){
@@ -102,6 +131,14 @@ VoteContract.prototype = {
       throw new Error("This operation can only be done by admin");
   },
 
+  _toString: function(){
+    return JSON.stringify(this);
+  },
+
+  _verifyAddress: function(addr){
+    var res = Blockchain.verifyAddress(addr);
+    return res==1?true:false;
+  },
 
   //public functions
   init: function(){
@@ -109,17 +146,23 @@ VoteContract.prototype = {
     this._admin = Blockchain.transaction.from;
   },
 
-  setOwner: function(owner){
-    this._authorityCheck();
-    this._owner = owner;
+  // authority required: set owner of given "scene" to be "owner"
+  setOwner: function(sceneName, owner){
+    if(!this._verifyAddress(owner))
+      throw new Error("Invalid owner address");
+
+    var scene = this._scenes.get(sceneName);
+    if(scene == undefined)
+      throw new Error("Scene does not exist!");
+    scene.setOwner(owner);
   },
 
   createScene: function(name, owner){
-    if(name == undefined || name.length() == 0){
+    if(name == undefined || name.length == 0){
       console.log("Voting scene name cannot be empty");
       throw new Error("Voting scene name cannot be empty");
     }
-    if(owner == undefined || owner.length() == 0){
+    if(owner == undefined || owner.length == 0){
       console.log("Voting scene owner is required");
       throw new Error("Voting scene owner is required");
     }
@@ -129,7 +172,7 @@ VoteContract.prototype = {
     this._scenes.set(name, new Scene(name, this._admin, owner));
   },
 
-  delete_scene: function(name){
+  deleteScene: function(name){
     if(Blockchain.transaction.from != this._admin){
       // check authority
       var sceneObj = this._scenes.get(name);
@@ -157,6 +200,23 @@ VoteContract.prototype = {
       throw new Error("Scene does not exist");
     
     return scene.hasVote();
+  },
+
+  // remove the user's vote in scene with name
+  deleteVote: function(name, user){
+    var scene = this._scenes.get(name);
+    if(scene == undefined)
+      throw new Error("Scene does not exist");
+    //verify user's address
+    if(!this._verifyAddress(user))
+      throw new Error("Invalid user address");
+    scene.deleteVote(user);
+  },
+
+  // authority required: show all scenes created so far
+  getScenes: function(){
+    this._authorityCheck();
+    return this._toString();
   },
 };
 
