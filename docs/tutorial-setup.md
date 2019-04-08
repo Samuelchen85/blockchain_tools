@@ -37,10 +37,10 @@ export GOPATH=/path/to/workspace
 
 ```bash
 # download
-wget https://dl.google.com/go/go1.9.3.linux-amd64.tar.gz
+wget https://dl.google.com/go/go1.11.linux-amd64.tar.gz
 
 # extract
-tar -C /usr/local -xzf go1.9.3.linux-amd64.tar.gz
+tar -C /usr/local -xzf go1.11.linux-amd64.tar.gz
 
 # environment variables
 export PATH=$PATH:/usr/local/go/bin
