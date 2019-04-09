@@ -52,10 +52,10 @@ function upload_nvm(){
   echo "--- Start to upload to Aliyun ---"
   # send to aliyun
   if [ -x "$(command -v ossutil64)" ]; then
-     ossutil64 rm oss://develop-center/setup/nvm/${PACK_DIR}.tar.gz
+     ossutil64 cp oss://develop-center/setup/nvm/${PACK_DIR}.tar.gz oss://develop-center/setup/nvm/archive/${PACK_DIR}.tar.gz
      ossutil64 cp ${PACK_DIR}.tar.gz -r oss://develop-center/setup/nvm/
-  elif [ -x "$(command -v ossutilmac64)" ];then
-     ossutilmac64 rm oss://develop-center/setup/nvm/${PACK_DIR}.tar.gz
+  elif [ -x "$(command -v ossutilmac64)" ]; then
+     ossutilmac64 cp oss://develop-center/setup/nvm/${PACK_DIR}.tar.gz oss://develop-center/setup/nvm/archive/${PACK_DIR}.tar.gz
      ossutilmac64 cp ${PACK_DIR}.tar.gz -r oss://develop-center/setup/nvm/
   else
      warning "aliyun"
@@ -64,7 +64,7 @@ function upload_nvm(){
   echo "--- Start to upload to AWS S3 ---"
   # send to AWS S3
   if [ -x "$(command -v aws)" ]; then
-     aws s3 rm s3://develop-center/setup/nvm/${PACK_DIR}.tar.gz
+     aws s3 mv s3://develop-center/setup/nvm/${PACK_DIR}.tar.gz s3://develop-center/setup/nvm/archive/
      aws s3 cp ${PACK_DIR}.tar.gz s3://develop-center/setup/nvm/ --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers 
   else
      warning "aws"
@@ -129,11 +129,11 @@ function upload_nbre(){
           ossutil64 rm oss://develop-center/setup/nbre/18.04/${PACK_DIR}.tar.gz
           ossutil64 cp ${PACK_DIR}.tar.gz -r oss://develop-center/setup/nbre/18.04/
      else
-          ossutil64 mv oss://develop-center/setup/nbre/${PACK_DIR}.tar.gz oss://develop-center/setup/nbre/archive/
+          ossutil64 cp oss://develop-center/setup/nbre/${PACK_DIR}.tar.gz oss://develop-center/setup/nbre/archive/${PACK_DIR}.tar.gz
           ossutil64 cp ${PACK_DIR}.tar.gz -r oss://develop-center/setup/nbre/
      fi
   elif [ -x "$(command -v ossutilmac64)" ]; then
-          ossutilmac64 mv oss://develop-center/setup/nbre/${PACK_DIR}.tar.gz oss://develop-center/setup/nbre/archive
+          ossutilmac64 cp oss://develop-center/setup/nbre/${PACK_DIR}.tar.gz oss://develop-center/setup/nbre/archive/${PACK_DIR}.tar.gz
           ossutilmac64 cp ${PACK_DIR}.tar.gz -r oss://develop-center/setup/nbre/
   else
     echo "Install ossutil firstly before submitting to Aliyun!"
@@ -146,7 +146,7 @@ function upload_nbre(){
         aws s3 rm s3://develop-center/setup/nbre/18.04/${PACK_DIR}.tar.gz
         aws s3 cp ${PACK_DIR}.tar.gz s3://develop-center/setup/nbre/18.04/ --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers 
      else
-        aws s3 rm s3://develop-center/setup/nbre/${PACK_DIR}.tar.gz
+        aws s3 mv s3://develop-center/setup/nbre/${PACK_DIR}.tar.gz s3://develop-center/setup/nbre/archive
         aws s3 cp ${PACK_DIR}.tar.gz s3://develop-center/setup/nbre/ --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers 
      fi
   else
