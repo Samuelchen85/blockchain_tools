@@ -38,7 +38,7 @@ function upload_nvm(){
   fi
 
   pushd $GOPATH/src/github.com/nebulasio/go-nebulas/nf/nvm
-  CUR_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}"  )" >/dev/null && pwd  )"
+  CUR_DIR=`pwd`
   if [ "$OS" = "Darwin" ]; then
     PACK_DIR="lib_nvm_Darwin"
   else
@@ -82,7 +82,7 @@ function upload_nbre(){
 
   pushd $GOPATH/src/github.com/nebulasio/go-nebulas/nbre
 
-  CUR_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}"  )" >/dev/null && pwd  )"
+  CUR_DIR=`pwd`
   CLANG_HEADER_DIR="clang/6.0.1"
 
   if [ "$OS" = "Darwin" ]; then
