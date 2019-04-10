@@ -1,86 +1,55 @@
-#### Build From Scratch
-- Build cmake (optional)  
-  If cmake is not installed or the version is lower than 3.12, then you need to install a newer cmake
-  ```bash
-  # download cmake source code
-  wget https://github.com/Kitware/CMake/archive/v3.12.0.tar.gz
+## Nebulas Mainnet 2.0 更新指南
+
+*该文档涉及从星云主网1.0更新到2.0的详细步骤，供参考，默认操作系统是Linux。  
   
-  # build from source code
-  tar -xvzf v3.12.0.tar.gz
-  cd CMake-3.12.0
-  ./bootstrap
-  make
-  
-  # install cmake and related libraries
-  make install
-  ```
-- Build Rocksdb (optional)  
-  If rocksdb is not installed or the version is lower than 5.18, then you need to install rocksdb
+
+### 1. Check out最新主网代码
+```shell
+cd $GOPATH/src/github/com/nebulasio/go-nebulas
+git pull origin mainnet
+```
+
+### 2. 编译NBRE和配置NVM
+- 编译NBRE的依赖库文件(该步骤会比较耗时)
   ```bash
-  git clone https://github.com/facebook/rocksdb.git
-  cd rocksdb && make shared_lib && make install-shared
-  ```
-- Compile NBRE
-  ```bash
-  cd $GOPATH/src/github.com/nebulasio/go-nebulas/nbre
-  
-  # build libraries by running the prepare script
+  cd $GOPATH/src/github/com/nebulasio/go-nebulas/nbre
   ./prepare.sh
-  
-  # set up environment variables
+  ```
+- 编译NBRE
+  ```bash
   source env.set.sh
-  
-  # build NBRE
   mkdir build
   cd build
   cmake -DRelease=1 ../
-  make
+  make -j4
   ```
-- Setup NVM  
-  download NVM dependent dynamic link libraries
+- 配置NVM依赖库
   ```bash
-  # For Linux
+  cd $GOPATH/src/github/com/nebulasio/go-nebulas/nf/nvm
   wget http://develop-center.oss-cn-zhangjiakou.aliyuncs.com/setup/nvm/lib_nvm_Linux.tar.gz
-  
-  # For Mac
-  wget https://develop-center.oss-cn-zhangjiakou.aliyuncs.com/setup/nvm/lib_nvm_Darwin.tar.gz
-  
-  # Decompress the package and move the libraries 
+  tar -xvzf lib_nvm_Linux.tar.gz
+  mv lib_nvm_Linux native-lib
   ```
 
-#### Compile NBRE
+### 3. 编译NEB
+- 执行脚本`install-native-libs.sh`生成软链接并且设置环境变量
+  ```bash
+  cd $GOPATH/src/github/com/nebulasio/go-nebulas/
+  source install-native-libs.sh
+  ```
+- 编译NEB
+  ```bash
+  make build
+  ```
 
-
-
-
-### Install RocksDB
-
-* **OS X**:
-* Install rocksdb via [Homebrew](https://brew.sh/)
+### 4. 启动NEB
 ```bash
-brew install rocksdb
+cd $GOPATH/src/github/com/nebulasio/go-nebulas/
+./neb -c mainnet/conf/config.conf
 ```
-
-* **Linux - Ubuntu**
-* Install Dependencies
+如果提示找不到依赖库文件，则可能是环境变量设置过程出现问题。
 ```bash
-apt-get update
-apt-get -y install build-essential libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev liblz4-dev libzstd-dev
-```
-* Install rocksdb by source code:
-```bash
-git clone https://github.com/facebook/rocksdb.git
-cd rocksdb && make shared_lib && make install-shared
-```
-
-* **Linux - Centos**
-* Install Dependencies
-```bash
-yum -y install epel-release && yum -y update
-yum -y install gflags-devel snappy-devel zlib-devel bzip2-devel gcc-c++  libstdc++-devel
-```
-* Install rocksdb by source code:
-```bash
-git clone https://github.com/facebook/rocksdb.git
-cd rocksdb && make shared_lib && make install-shared
+vi ~/.bashrc
+# 添加如下内容
+export LD_LIBRARY_PATH=$GOPATH/src/github.com/nebulasio/go-nebulas/native-lib:$LD_LIBRARY_PATH
 ```
