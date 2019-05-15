@@ -65,6 +65,10 @@ make install
 cd $GOPATH/src/github.com/nebulasio/go-nebulas
 # 下载NVM依赖库，生成软链接，配置环境变量
 source install-native-libs.sh
+# 下载vendor依赖包
+wget https://s3-us-west-1.amazonaws.com/develop-center/setup/vendor/vendor.tar.gz
+tar -zxf vendor.tar.gz
+make build
 ```
 
 ### 3.数据同步
